@@ -1,0 +1,51 @@
+# One Application per component listed for the cluster's environment
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: infrastructure
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - matrix:
+        generators:
+          # Every cluster registered in Argo CD, labels come from Terraform
+          - clusters:
+              selector:
+                matchLabels:
+                  argocd.argoproj.io/secret-type: cluster
+          # Every component file for that cluster's environment
+          - git:
+              repoURL: https://github.com/infrasam/aws-platform-gitops.git
+              revision: main
+              files:
+                - path: "environments/{{ .metadata.labels.environment }}/infrastructure/*.yaml"
+  template:
+    metadata:
+      name: "{{ .component.name }}"
+    spec:
+      project: default
+      sources:
+        # The Helm chart, version pinned per environment
+        - repoURL: "{{ .component.repoURL }}"
+          chart: "{{ .component.chart }}"
+          targetRevision: "{{ .component.version }}"
+          helm:
+            valueFiles:
+              - "$values/infrastructure/{{ .component.name }}/values.yaml"
+        # This repository, referenced as $values above
+        - repoURL: https://github.com/infrasam/aws-platform-gitops.git
+          targetRevision: main
+          ref: values
+      destination:
+        name: "{{ .name }}"
+        namespace: "{{ .component.namespace }}"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
+          - ServerSideApply=true
+
