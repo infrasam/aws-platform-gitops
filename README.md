@@ -76,10 +76,39 @@ flowchart LR
 │           ├── cert-manager.yaml   #   Chart, repository, version, namespace
 │           └── values/             #   Optional overrides for this environment
 │
-└── infrastructure/                 # HOW a component is configured
-    └── cert-manager/
-        └── values.yaml             #   Helm values shared by all environments
+├── infrastructure/                 # HOW a component is configured
+│   └── cert-manager/
+│       └── values.yaml             #   Helm values shared by all environments
+│
+├── .github/workflows/ci.yaml       # yamllint, render and validate, gitleaks
+├── .pre-commit-config.yaml         # gitleaks and yamllint before every commit
+└── .yamllint.yaml                  # YAML rules for the repository
 ```
+
+---
+
+## Validation
+
+Every pull request renders each component exactly as Argo CD would, before anything reaches a cluster.
+
+```mermaid
+flowchart LR
+    pr["📬 Pull Request"] --> lint["🧹 yamllint"]
+    pr --> render["⚙ helm template<br/><code>per environment and component</code>"]
+    render --> kc["✅ kubeconform<br/><code>Kubernetes and CRD schemas</code>"]
+    pr --> leaks["🔐 gitleaks"]
+    lint --> main["🔒 main"]
+    kc --> main
+    leaks --> main
+
+    style render fill:#1a2332,stroke:#58a6ff,color:#adbac7
+    style kc fill:#1f2a1f,stroke:#3fb950,color:#adbac7
+    style main fill:#161b22,stroke:#ef7b4d,color:#ef7b4d,stroke-width:2px
+```
+
+- `helm template` uses the chart version from the environment file and the same value files as the ApplicationSet, shared values first and environment overrides last
+- `kubeconform` validates the output against the Kubernetes schemas and, for custom resources, the CRDs catalog
+- `main` only accepts pull requests with all checks green
 
 ---
 

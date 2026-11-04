@@ -1,0 +1,70 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Read-only token by default
+permissions:
+  contents: read
+
+jobs:
+  # Fail on YAML syntax and style problems
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: yamllint --strict .
+
+  # Render every component per environment and validate the result against Kubernetes schemas
+  render:
+    runs-on: ubuntu-latest
+    env:
+      KUBECONFORM_VERSION: v0.8.0
+      CRD_SCHEMAS: https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+        with:
+          version: v4.3.1
+      - name: Install kubeconform
+        run: |
+          curl -fsSL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" | tar -xz -C /usr/local/bin kubeconform
+      - name: Validate bootstrap manifests
+        run: kubeconform -strict -summary -schema-location default -schema-location "$CRD_SCHEMAS" bootstrap/
+      - name: Render and validate components
+        run: |
+          set -euo pipefail
+          for file in environments/*/infrastructure/*.yaml; do
+            env=$(echo "$file" | cut -d/ -f2)
+            name=$(yq '.component.name' "$file")
+            values=(-f "infrastructure/$name/values.yaml")
+            override="environments/$env/infrastructure/values/$name.yaml"
+            if [ -f "$override" ]; then values+=(-f "$override"); fi
+
+            echo "::group::$env/$name"
+            helm template "$name" "$(yq '.component.chart' "$file")" \
+              --repo "$(yq '.component.repoURL' "$file")" \
+              --version "$(yq '.component.version' "$file")" \
+              --namespace "$(yq '.component.namespace' "$file")" \
+              "${values[@]}" \
+              | kubeconform -strict -summary -ignore-missing-schemas \
+                  -schema-location default -schema-location "$CRD_SCHEMAS"
+            echo "::endgroup::"
+          done
+
+  # Scan the full git history for secrets
+  gitleaks:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false

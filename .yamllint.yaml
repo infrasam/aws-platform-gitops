@@ -1,0 +1,11 @@
+# Default rules, relaxed where they clash with Kubernetes and Helm conventions
+extends: default
+
+rules:
+  # Long URLs and template expressions are normal in manifests
+  line-length: disable
+  # Manifests do not need a leading ---
+  document-start: disable
+  # Keys like "on" in GitHub workflows are not booleans
+  truthy:
+    check-keys: false
