@@ -51,7 +51,7 @@ flowchart LR
 1. Terraform registers the cluster in Argo CD with a **cluster Secret** labelled with its environment, and creates one **bootstrap** Application
 2. The bootstrap Application syncs `bootstrap/`, which contains the `infrastructure` ApplicationSet
 3. The ApplicationSet uses a **matrix generator**: for every registered cluster, it reads every file in `environments/<environment>/infrastructure/`
-4. Each file becomes one Application that installs a Helm chart with the version from that file and the values from `infrastructure/<name>/`
+4. Each file becomes one Application that installs a Helm chart with the version from that file, the shared values from `infrastructure/<name>/` and, if present, the environment's overrides from `environments/<environment>/infrastructure/values/`
 
 ---
 
@@ -73,7 +73,8 @@ flowchart LR
 ├── environments/                   # WHAT runs where, and which version
 │   └── dev/
 │       └── infrastructure/
-│           └── cert-manager.yaml   #   Chart, repository, version, namespace
+│           ├── cert-manager.yaml   #   Chart, repository, version, namespace
+│           └── values/             #   Optional overrides for this environment
 │
 └── infrastructure/                 # HOW a component is configured
     └── cert-manager/
@@ -95,7 +96,7 @@ No change to the ApplicationSet is needed.
 ## Key Design Decisions
 
 - **ApplicationSet instead of app of apps**: one template creates every Application, so adding a component never means writing another Application manifest
-- **Versions per environment, values shared**: each environment pins its own chart versions, which keeps a version change a small, reviewable diff
+- **Versions per environment, values layered**: each environment pins its own chart versions, and shared values can be overridden per environment in `environments/<environment>/infrastructure/values/`, so a change is tested in dev before it reaches other environments
 - **Environment comes from the cluster**: the cluster Secret decides which folder a cluster reads, so a new cluster with the same label gets the same components automatically
 - **Multi-source Applications**: the chart comes from its upstream Helm repository and the values from this repository, so no charts are vendored
 - **One entry point**: Terraform creates a single object and knows nothing about the content of this repository

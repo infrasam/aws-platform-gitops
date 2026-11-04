@@ -32,8 +32,13 @@ spec:
           chart: "{{ .component.chart }}"
           targetRevision: "{{ .component.version }}"
           helm:
+            # The environment file is optional, most components only need the shared one
+            ignoreMissingValueFiles: true
             valueFiles:
+              # Shared settings for every environment
               - "$values/infrastructure/{{ .component.name }}/values.yaml"
+              # Environment overrides, applied last so they win
+              - "$values/environments/{{ .metadata.labels.environment }}/infrastructure/values/{{ .component.name }}.yaml"
         # This repository, referenced as $values above
         - repoURL: https://github.com/infrasam/aws-platform-gitops.git
           targetRevision: main
