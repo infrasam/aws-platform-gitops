@@ -1,0 +1,13 @@
+repos:
+  # Block commits that contain secrets (keys, tokens, private keys)
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0
+    hooks:
+      - id: gitleaks
+
+  # Check YAML syntax and style with the repository's .yamllint.yaml
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.38.0
+    hooks:
+      - id: yamllint
+        args: [--strict]

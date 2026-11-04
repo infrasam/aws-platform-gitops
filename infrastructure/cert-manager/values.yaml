@@ -1,4 +1,3 @@
 # Install the CRDs together with the chart
 crds:
   enabled: true
-
