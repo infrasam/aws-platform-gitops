@@ -60,6 +60,7 @@ flowchart LR
 | Component | Description |
 |-----------|-------------|
 | **cert-manager** | Issues and renews TLS certificates, CRDs installed with the chart |
+| **Platform CA** | Internal root CA and the `platform-ca` ClusterIssuer, created by cert-manager after it is running (sync waves 1 and 2) |
 
 ---
 
