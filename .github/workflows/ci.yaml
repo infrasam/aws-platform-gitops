@@ -21,12 +21,14 @@ jobs:
   render:
     runs-on: ubuntu-latest
     env:
+      # renovate: datasource=github-releases depName=yannh/kubeconform
       KUBECONFORM_VERSION: v0.8.0
       CRD_SCHEMAS: https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json
     steps:
       - uses: actions/checkout@v7
       - uses: azure/setup-helm@v5
         with:
+          # renovate: datasource=github-releases depName=helm/helm
           version: v4.3.1
       - name: Install kubeconform
         run: |

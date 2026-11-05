@@ -82,7 +82,8 @@ flowchart LR
 │
 ├── .github/workflows/ci.yaml       # yamllint, render and validate, gitleaks
 ├── .pre-commit-config.yaml         # gitleaks and yamllint before every commit
-└── .yamllint.yaml                  # YAML rules for the repository
+├── .yamllint.yaml                  # YAML rules for the repository
+└── renovate.json                   # Automated chart and tool updates
 ```
 
 ---
@@ -109,6 +110,30 @@ flowchart LR
 - `helm template` uses the chart version from the environment file and the same value files as the ApplicationSet, shared values first and environment overrides last
 - `kubeconform` validates the output against the Kubernetes schemas and, for custom resources, the CRDs catalog
 - `main` only accepts pull requests with all checks green
+
+---
+
+## Dependency Updates
+
+**Renovate** watches every chart in `environments/dev/infrastructure/` and opens a pull request when a new version is released. The pull request goes through the same validation as any other change, so a new chart version is rendered and checked before Argo CD ever sees it.
+
+```mermaid
+sequenceDiagram
+    participant R as Renovate
+    participant GH as GitHub
+    participant CI as CI
+    participant A as Argo CD
+
+    R->>GH: Detects a new chart version
+    R->>GH: Opens PR bumping environments/dev
+    CI->>GH: Renders and validates the new version
+    actor Dev as Developer
+    Dev->>GH: Reviews and merges
+    A->>GH: Detects the change
+    A->>A: Upgrades the component in dev
+```
+
+Only dev is updated automatically. Other environments receive a version once it has run in dev. Tool versions in the workflows (Helm, kubeconform) and GitHub Actions are kept up to date the same way.
 
 ---
 
