@@ -45,13 +45,36 @@ jobs:
             override="environments/$env/infrastructure/values/$name.yaml"
             if [ -f "$override" ]; then values+=(-f "$override"); fi
 
+            # Classic Helm repositories use https://, OCI registries are written without a scheme like in Argo CD
+            repo=$(yq '.component.repoURL' "$file")
+            chart=$(yq '.component.chart' "$file")
+            if [[ "$repo" == http* ]]; then source=("$chart" --repo "$repo"); else source=("oci://$repo/$chart"); fi
+
             echo "::group::$env/$name"
-            helm template "$name" "$(yq '.component.chart' "$file")" \
-              --repo "$(yq '.component.repoURL' "$file")" \
+            helm template "$name" "${source[@]}" \
               --version "$(yq '.component.version' "$file")" \
               --namespace "$(yq '.component.namespace' "$file")" \
               "${values[@]}" \
               | kubeconform -strict -summary -ignore-missing-schemas \
+                  -schema-location default -schema-location "$CRD_SCHEMAS"
+            echo "::endgroup::"
+          done
+      - name: Render and validate extras charts
+        run: |
+          set -euo pipefail
+          for file in environments/*/infrastructure/*.yaml; do
+            if [ "$(yq '.component.extras // false' "$file")" != "true" ]; then continue; fi
+            env=$(echo "$file" | cut -d/ -f2)
+            name=$(yq '.component.name' "$file")
+            values=()
+            override="environments/$env/infrastructure/values/$name-extras.yaml"
+            if [ -f "$override" ]; then values+=(-f "$override"); fi
+
+            echo "::group::$env/$name-extras"
+            helm template "$name-extras" "infrastructure/$name/extras" \
+              --namespace "$(yq '.component.namespace' "$file")" \
+              "${values[@]}" \
+              | kubeconform -strict -summary \
                   -schema-location default -schema-location "$CRD_SCHEMAS"
             echo "::endgroup::"
           done

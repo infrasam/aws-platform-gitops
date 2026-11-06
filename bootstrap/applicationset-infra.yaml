@@ -26,23 +26,8 @@ spec:
       name: "{{ .component.name }}"
     spec:
       project: default
-      sources:
-        # The Helm chart, version pinned per environment
-        - repoURL: "{{ .component.repoURL }}"
-          chart: "{{ .component.chart }}"
-          targetRevision: "{{ .component.version }}"
-          helm:
-            # The environment file is optional, most components only need the shared one
-            ignoreMissingValueFiles: true
-            valueFiles:
-              # Shared settings for every environment
-              - "$values/infrastructure/{{ .component.name }}/values.yaml"
-              # Environment overrides, applied last so they win
-              - "$values/environments/{{ .metadata.labels.environment }}/infrastructure/values/{{ .component.name }}.yaml"
-        # This repository, referenced as $values above
-        - repoURL: https://github.com/infrasam/aws-platform-gitops.git
-          targetRevision: main
-          ref: values
+      # Sources are set in templatePatch, so the extras chart can be added per component
+      sources: []
       destination:
         name: "{{ .name }}"
         namespace: "{{ .component.namespace }}"
@@ -53,3 +38,33 @@ spec:
         syncOptions:
           - CreateNamespace=true
           - ServerSideApply=true
+  templatePatch: |
+    spec:
+      sources:
+        # The upstream Helm chart, version pinned per environment
+        - repoURL: "{{ .component.repoURL }}"
+          chart: "{{ .component.chart }}"
+          targetRevision: "{{ .component.version }}"
+          helm:
+            # Environment files are optional, most components only need the shared values
+            ignoreMissingValueFiles: true
+            valueFiles:
+              # Shared settings for every environment
+              - "$values/infrastructure/{{ .component.name }}/values.yaml"
+              # Environment overrides, applied last so they win
+              - "$values/environments/{{ .metadata.labels.environment }}/infrastructure/values/{{ .component.name }}.yaml"
+        # This repository, referenced as $values
+        - repoURL: https://github.com/infrasam/aws-platform-gitops.git
+          targetRevision: main
+          ref: values
+      {{- if dig "extras" false .component }}
+        # Our own chart with related objects (issuers, secrets, dashboards), enabled with extras: true
+        - repoURL: https://github.com/infrasam/aws-platform-gitops.git
+          targetRevision: main
+          path: "infrastructure/{{ .component.name }}/extras"
+          helm:
+            ignoreMissingValueFiles: true
+            valueFiles:
+              # Environment overrides for the extras chart, its own values.yaml is the default
+              - "$values/environments/{{ .metadata.labels.environment }}/infrastructure/values/{{ .component.name }}-extras.yaml"
+      {{- end }}

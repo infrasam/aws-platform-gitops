@@ -1,0 +1,4 @@
+# Internal root CA of the platform
+rootCA:
+  # Lifetime of the root certificate, the certificates it issues are short lived
+  duration: 87600h

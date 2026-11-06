@@ -9,3 +9,7 @@ rules:
   # Keys like "on" in GitHub workflows are not booleans
   truthy:
     check-keys: false
+
+# Helm templates are not valid YAML until rendered, CI validates them after rendering
+ignore: |
+  infrastructure/*/extras/templates/
