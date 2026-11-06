@@ -51,7 +51,7 @@ flowchart LR
 1. Terraform registers the cluster in Argo CD with a **cluster Secret** labelled with its environment, and creates one **bootstrap** Application
 2. The bootstrap Application syncs `bootstrap/`, which contains the `infrastructure` ApplicationSet
 3. The ApplicationSet uses a **matrix generator**: for every registered cluster, it reads every file in `environments/<environment>/infrastructure/`
-4. Each file becomes one Application that installs a Helm chart with the version from that file, the shared values from `infrastructure/<name>/` and, if present, the environment's overrides from `environments/<environment>/infrastructure/values/`
+4. Each file becomes one Application that installs a Helm chart with the version from that file, the shared values from `infrastructure/<name>/`, the environment's overrides from `environments/<environment>/infrastructure/values/` if present, and, when the component sets `extras: true`, its own companion chart from `infrastructure/<name>/extras/`
 
 ---
 
@@ -60,7 +60,7 @@ flowchart LR
 | Component | Description |
 |-----------|-------------|
 | **cert-manager** | Issues and renews TLS certificates, CRDs installed with the chart |
-| **Platform CA** | Internal root CA and the `platform-ca` ClusterIssuer, created by cert-manager after it is running (sync waves 1 and 2) |
+| **Platform CA** | Internal root CA and the `platform-ca` ClusterIssuer, shipped in cert-manager's extras chart and applied after cert-manager is running (sync waves 1 and 2) |
 
 ---
 
@@ -74,12 +74,16 @@ flowchart LR
 ├── environments/                   # WHAT runs where, and which version
 │   └── dev/
 │       └── infrastructure/
-│           ├── cert-manager.yaml   #   Chart, repository, version, namespace
-│           └── values/             #   Optional overrides for this environment
+│           ├── cert-manager.yaml   #   Chart, repository, version, namespace, extras
+│           └── values/             #   Optional overrides: <name>.yaml and <name>-extras.yaml
 │
 ├── infrastructure/                 # HOW a component is configured
 │   └── cert-manager/
-│       └── values.yaml             #   Helm values shared by all environments
+│       ├── values.yaml             #   Values for the upstream chart, shared by all environments
+│       └── extras/                 #   Optional companion chart for related objects
+│           ├── Chart.yaml
+│           ├── values.yaml
+│           └── templates/          #   Issuers, ExternalSecrets, dashboards, in any subfolders
 │
 ├── .github/workflows/ci.yaml       # yamllint, render and validate, gitleaks
 ├── .pre-commit-config.yaml         # gitleaks and yamllint before every commit
@@ -142,7 +146,8 @@ Only dev is updated automatically. Other environments receive a version once it 
 
 1. Create `environments/<environment>/infrastructure/<name>.yaml` with the chart, repository, version and namespace
 2. Create `infrastructure/<name>/values.yaml` with its settings
-3. Open a pull request. After merge, the ApplicationSet discovers the file and Argo CD installs the component
+3. Optionally add related objects that the upstream chart does not create, such as issuers, ExternalSecrets or dashboards, as a small chart in `infrastructure/<name>/extras/` and set `extras: true` in the environment file. Environment differences go in `environments/<environment>/infrastructure/values/<name>-extras.yaml`
+4. Open a pull request. After merge, the ApplicationSet discovers the file and Argo CD installs the component
 
 No change to the ApplicationSet is needed.
 
@@ -153,5 +158,6 @@ No change to the ApplicationSet is needed.
 - **ApplicationSet instead of app of apps**: one template creates every Application, so adding a component never means writing another Application manifest
 - **Versions per environment, values layered**: each environment pins its own chart versions, and shared values can be overridden per environment in `environments/<environment>/infrastructure/values/`, so a change is tested in dev before it reaches other environments
 - **Environment comes from the cluster**: the cluster Secret decides which folder a cluster reads, so a new cluster with the same label gets the same components automatically
-- **Multi-source Applications**: the chart comes from its upstream Helm repository and the values from this repository, so no charts are vendored
+- **Multi-source Applications**: the upstream chart comes from its Helm or OCI registry and the values from this repository, so no third-party charts are vendored
+- **Companion extras chart**: objects that belong to a component live next to it as a templated chart in the same Application, so they support subfolders and per-environment values the same way as the upstream chart
 - **One entry point**: Terraform creates a single object and knows nothing about the content of this repository
