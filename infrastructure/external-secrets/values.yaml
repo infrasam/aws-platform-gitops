@@ -1,0 +1,2 @@
+# Install the CRDs together with the chart
+installCRDs: true

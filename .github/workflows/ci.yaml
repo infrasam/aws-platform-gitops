@@ -71,9 +71,13 @@ jobs:
             if [ -f "$override" ]; then values+=(-f "$override"); fi
 
             echo "::group::$env/$name-extras"
+            # Placeholder bridge values, in the cluster they come from the cluster Secret
             helm template "$name-extras" "infrastructure/$name/extras" \
               --namespace "$(yq '.component.namespace' "$file")" \
               "${values[@]}" \
+              --set-string bridge.clusterName=ci-cluster \
+              --set-string bridge.awsRegion=eu-north-1 \
+              --set-string bridge.awsVpcId=vpc-ci \
               | kubeconform -strict -summary \
                   -schema-location default -schema-location "$CRD_SCHEMAS"
             echo "::endgroup::"

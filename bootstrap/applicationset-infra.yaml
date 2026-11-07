@@ -67,4 +67,10 @@ spec:
             valueFiles:
               # Environment overrides for the extras chart, its own values.yaml is the default
               - "$values/environments/{{ .metadata.labels.environment }}/infrastructure/values/{{ .component.name }}-extras.yaml"
+            # GitOps Bridge: infrastructure facts from the cluster Secret written by Terraform
+            valuesObject:
+              bridge:
+                clusterName: "{{ .metadata.annotations.cluster_name }}"
+                awsRegion: "{{ .metadata.annotations.aws_region }}"
+                awsVpcId: "{{ .metadata.annotations.aws_vpc_id }}"
       {{- end }}
