@@ -1,0 +1,5 @@
+# Infrastructure facts, filled in by the ApplicationSet from the cluster Secret (GitOps Bridge)
+bridge:
+  clusterName: ""
+  awsRegion: ""
+  awsVpcId: ""

@@ -1,0 +1,5 @@
+apiVersion: v2
+name: external-secrets-extras
+description: Secret stores for External Secrets
+type: application
+version: 0.1.0
