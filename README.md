@@ -160,7 +160,7 @@ No change to the ApplicationSet is needed.
 - **ApplicationSet instead of app of apps**: one template creates every Application, so adding a component never means writing another Application manifest
 - **Versions per environment, values layered**: each environment pins its own chart versions, and shared values can be overridden per environment in `environments/<environment>/infrastructure/values/`, so a change is tested in dev before it reaches other environments
 - **Environment comes from the cluster**: the cluster Secret decides which folder a cluster reads, so a new cluster with the same label gets the same components automatically
-- **Infrastructure facts as values**: the cluster name, region and VPC ID from the cluster Secret are passed to every extras chart as `bridge` values, so manifests such as the secret store work unchanged in every environment
+- **Infrastructure facts as values**: the cluster name, region, VPC ID and SSM parameter path from the cluster Secret are passed to every extras chart as `bridge` values, so manifests such as the secret store work unchanged in every environment
 - **Multi-source Applications**: the upstream chart comes from its Helm or OCI registry and the values from this repository, so no third-party charts are vendored
 - **Companion extras chart**: objects that belong to a component live next to it as a templated chart in the same Application, so they support subfolders and per-environment values the same way as the upstream chart
 - **One entry point**: Terraform creates a single object and knows nothing about the content of this repository

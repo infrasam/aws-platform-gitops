@@ -73,4 +73,5 @@ spec:
                 clusterName: "{{ .metadata.annotations.cluster_name }}"
                 awsRegion: "{{ .metadata.annotations.aws_region }}"
                 awsVpcId: "{{ .metadata.annotations.aws_vpc_id }}"
+                ssmParameterPrefix: "{{ .metadata.annotations.ssm_parameter_prefix }}"
       {{- end }}

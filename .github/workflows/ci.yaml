@@ -78,6 +78,7 @@ jobs:
               --set-string bridge.clusterName=ci-cluster \
               --set-string bridge.awsRegion=eu-north-1 \
               --set-string bridge.awsVpcId=vpc-ci \
+              --set-string bridge.ssmParameterPrefix=/platform/ci-cluster \
               | kubeconform -strict -summary \
                   -schema-location default -schema-location "$CRD_SCHEMAS"
             echo "::endgroup::"

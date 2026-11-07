@@ -3,3 +3,4 @@ bridge:
   clusterName: ""
   awsRegion: ""
   awsVpcId: ""
+  ssmParameterPrefix: ""
